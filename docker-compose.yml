@@ -1,0 +1,42 @@
+services:
+  summarizer-app:
+    build: .
+    container_name: summarizer-app
+    ports:
+      - ${APP_PORT:-8000}:8000
+    environment:
+      # Database
+      - DB_URL=${DB_URL:-postgresql://postgres:Lkm4yhTaQpmTnFqp@database:5432/postgres}
+      - DB_POOL_SIZE=${DB_POOL_SIZE:-5}
+      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW:-10}
+      - DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT:-30}
+      - DB_POOL_RECYCLE=${DB_POOL_RECYCLE:-300}
+
+      # MinIO
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-storage:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-admin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-PlKjEnP9mEKuc5aB}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-summarizer-data}
+
+      # JWT
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-x2Kv5BryyME47ToGsKVCMLVgtw5pK5P2uOBLDiszWcqyFCAXWZZR8LHdlkD3PR0t}
+
+      # Application
+      - MODEL_TOKEN=$MODEL_TOKEN
+
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-text}
+
+    restart: unless-stopped
+    command: ["app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      default:
+        aliases:
+          - app
+
+networks:
+  default:
+    name: ${NETWORK_NAME:-summarizer_network}
+    external: true
