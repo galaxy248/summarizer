@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=72.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "summarizer"
+version = "1.0.0"
+description = "An AI-powered content summarization service."
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Amir Mohammad Anvari", email = "gitamamic.ms@gmail.com"},
+    {name = "Amir Mahdi Abooshahab", email = "amir.mahdi.aboo@gmail.com"}
+]
+maintainers = [
+    {name = "Amir Mohammad Anvari", email = "gitamamic.ms@gmail.com"},
+    {name = "Amir Mahdi Abooshahab", email = "amir.mahdi.aboo@gmail.com"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.115.11",
+    "uvicorn[standard]==0.34.2",
+    "passlib[bcrypt]==1.7.4",
+    "python-multipart==0.0.20",
+    "sqlalchemy==2.0.41",
+    "psycopg2-binary==2.9.10",
+    "python-json-logger==3.2.1",
+    "PyJWT==2.10.1",
+    "markdown==3.7",
+    "minio==7.2.14",
+    "openai==1.76.2",
+    "PyMuPDF==1.25.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/galaxy248/summarizer"
+Documentation = "https://github.com/galaxy248/summarizer"
+Repository = "https://github.com/galaxy248/summarizer"
+Issues = "https://github.com/galaxy248/summarizer/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["summarizer*"]
+exclude = ["test*"]
