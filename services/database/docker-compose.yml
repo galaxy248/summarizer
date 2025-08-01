@@ -1,0 +1,32 @@
+services:
+  summarizer-database:
+    image: postgres:16.9
+    volumes:
+      - backup:/backup
+      - archive:/archive
+      - data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-Lkm4yhTaQpmTnFqp}
+    restart: unless-stopped
+    ports:
+      - ${POSTGRES_PORT:-20800}:5432
+    networks:
+      default:
+        aliases:
+          - database
+
+networks:
+  default:
+    name: ${NETWORK_NAME:-summarizer_network}
+    external: true
+
+volumes:
+  data:
+    name: summarizer_db_data
+  backup:
+    name: summarizer_db_backup
+  archive:
+    name: summarizer_db_archive
