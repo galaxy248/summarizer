@@ -52,6 +52,7 @@ class UserRepository(Database):
         try:
             with self.get_session() as session:
                 session.add(new_user)
+                session.commit()
                 session.refresh(new_user)
 
             return new_user
