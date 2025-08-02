@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Summarizer</title>
+    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+    <script src="/static/js/auth-utils.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>Summarizer</h1>
+            </div>
+            <div class="nav-menu">
+                <span id="user-info"><i class="fas fa-spinner"></i> Loading...</span>
+                <button id="logout-btn" class="nav-btn"><i class="fas fa-arrow-right-from-bracket"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="dashboard-container">
+        <div class="welcome-section">
+            <h2 id="welcome-message">Welcome back!</h2>
+            <p>Upload and summarize your content</p>
+        </div>
+
+        <div class="dashboard-content">
+            <section class="upload-section">
+                <div class="section-header">
+                    <h3>Upload Content</h3>
+                </div>
+
+                <div id="drag-drop-area" class="upload-area">
+                    <div class="upload-icon"><i class="fas fa-folder-open"></i></div>
+                    <p class="upload-text">Drag & drop your file here</p>
+                    <p class="upload-or">or</p>
+                    <label for="file-upload" class="upload-btn"><i class="fas fa-file-circle-plus"></i> Choose File</label>
+                    <p class="upload-info">Supports: <i class="fas fa-file-lines"></i> Text (.txt), <i class="fab fa-markdown"></i> Markdown (.md), <i class="fas fa-file-pdf"></i> PDF (.pdf)</p>
+                </div>
+                
+                <input type="file" id="file-upload" accept=".txt,.md,.pdf" hidden>
+
+                <div class="text-input-section">
+                    <label for="text-input">Or paste your text here:</label>
+                    <textarea id="text-input" placeholder="Paste your text content..." rows="6"></textarea>
+                </div>
+            </section>
+
+            <section class="config-section">
+                <div class="section-header">
+                    <h3>Configuration</h3>
+                </div>
+
+                <div class="config-grid">
+                    <div class="config-group">
+                        <label for="prompt">Prompt Type:</label>
+                        <select id="prompt" name="prompt">
+                            <option value="Thematic">Thematic</option>
+                            <option value="Priority">Priority</option>
+                        </select>
+                    </div>
+
+                    <div class="config-group">
+                        <label for="model">Model:</label>
+                        <select id="model" name="model">
+                            <option value="openai/gpt-4.1-mini">GPT 4.1</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section class="action-section">
+                <button id="summarize-btn" class="primary-btn" disabled>
+                    <i class="fas fa-rocket"></i>
+                    Generate Summary
+                </button>
+            </section>
+
+            <section id="results-section" class="results-section hidden">
+                <div class="section-header">
+                    <h3>Summary Result</h3>
+                </div>
+                <div id="summary-output" class="summary-output"></div>
+            </section>
+
+            <section id="loading-section" class="loading-section hidden">
+                <div class="loading-spinner"></div>
+                <p>Processing your content...</p>
+            </section>
+        </div>
+    </main>
+
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+        });
+
+        async function initializeDashboard() {
+            const authOverlay = AuthUtils.showAuthCheckOverlay('Verifying your session...');
+            
+            try {
+                const userInfo = await AuthUtils.checkAuthenticationWithRetry();
+                
+                if (userInfo) {
+                    document.getElementById('user-info').innerHTML = `<i class="fas fa-user"></i> ${userInfo.username}`;
+                    document.getElementById('welcome-message').textContent = `Welcome back, ${userInfo.first_name || userInfo.username}!`;
+                    
+                    setTimeout(() => {
+                        AuthUtils.hideAuthCheckOverlay();
+                    }, 500);
+                    
+                    setupEventListeners();
+                } else {
+                    AuthUtils.handleAuthFailure(new Error('No user data received'));
+                }
+            } catch (error) {
+                console.error('Authentication check failed:', error);
+                
+                AuthUtils.hideAuthCheckOverlay();
+                
+                if (error.message.includes('fetch') || error.message.includes('network')) {
+                    setTimeout(() => {
+                        AuthUtils.showNetworkErrorOverlay(error, initializeDashboard);
+                    }, 300);
+                } else {
+                    setTimeout(() => {
+                        AuthUtils.handleAuthFailure(error, 'Your session has expired and could not be renewed. Please log in again.');
+                    }, 300);
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+            const fileInput = document.getElementById('file-upload');
+            const textInput = document.getElementById('text-input');
+            const summarizeBtn = document.getElementById('summarize-btn');
+
+            fileInput.addEventListener('change', handleFileSelect);
+            textInput.addEventListener('input', handleTextInput);
+
+            const dragDropArea = document.getElementById('drag-drop-area');
+            dragDropArea.addEventListener('dragover', handleDragOver);
+            dragDropArea.addEventListener('drop', handleDrop);
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                updateSummarizeButton(true);
+                showFileInfo(file);
+            }
+        }
+
+        function handleTextInput(event) {
+            const text = event.target.value.trim();
+            updateSummarizeButton(text.length > 0);
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const fileInput = document.getElementById('file-upload');
+                
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(files[0]);
+                fileInput.files = dataTransfer.files;
+                
+                handleFileSelect({ target: { files: files } });
+            }
+        }
+
+        function updateSummarizeButton(enabled) {
+            const btn = document.getElementById('summarize-btn');
+            btn.disabled = !enabled;
+        }
+
+        function showFileInfo(file) {
+            const dragDropArea = document.getElementById('drag-drop-area');
+            dragDropArea.innerHTML = `
+                <div class="file-info">
+                    <div class="file-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="file-details">
+                        <p class="file-name">${file.name}</p>
+                        <p class="file-size">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <button onclick="clearFile()" class="clear-btn"><i class="fas fa-times"></i></button>
+                </div>
+            `;
+        }
+
+        function clearFile() {
+            const fileInput = document.getElementById('file-upload');
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            updateSummarizeButton(false);
+            
+            const dragDropArea = document.getElementById('drag-drop-area');
+            dragDropArea.innerHTML = `
+                <div class="upload-icon"><i class="fas fa-folder-open"></i></div>
+                <p class="upload-text">Drag & drop your file here</p>
+                <p class="upload-or">or</p>
+                <label for="file-upload" class="upload-btn"><i class="fas fa-file-circle-plus"></i> Choose File</label>
+                <p class="upload-info">Supports: <i class="fas fa-file-lines"></i> Text (.txt), <i class="fab fa-markdown"></i> Markdown (.md), <i class="fas fa-file-pdf"></i> PDF (.pdf)</p>
+            `;
+        }
+        
+        async function handleLogout() {
+            try {
+                AuthUtils.showPageTransition('Logging out...');
+                
+                const response = await fetch('/api/v1/auth/user/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                AuthUtils.clearAuthData();
+                
+                await AuthUtils.smoothRedirect('/login', 'Redirecting to login...', 800);
+            } catch (error) {
+                console.error('Logout error:', error);
+                AuthUtils.clearAuthData();
+                await AuthUtils.smoothRedirect('/login', 'Redirecting to login...', 500);
+            }
+        }
+    </script>
+    
+    <footer style="text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #eee; color: #666; font-size: 14px;" class="footer-links">
+        <i class="fa-solid fa-code" style="color: #764ba2;"></i> With <i class="fa-solid fa-heart" style="color: #dc143c;"></i> & <i class="fa-solid fa-mug-saucer" style="color: #b38867;"></i> by <a href="https://github.com/galaxy248"> Amir Mohammad Anvari </a> and <a href="https://github.com/AmirMahdiAboo" >Amir Mahdi Abooshahab </a>
+    </footer>
+</body>
+</html>

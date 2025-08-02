@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Summarizer</title>
+    <link rel="icon" type="image/x-icon" href="/static/image/favicon.ico">
+    <link rel="stylesheet" href="/static/styles/auth.css">
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+    <script src="/static/js/auth-utils.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Join Summarizer</h1>
+        <p>Create your account to start summarizing content</p>
+    </header>
+
+    <main class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Create Account</h2>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <form id="signup-form" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" required placeholder="Enter your first name">
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" required placeholder="Enter your last name">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required placeholder="Choose a username">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email address">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Create a strong password" minlength="6">
+                    <small class="form-text">Password must be at least 6 characters long</small>
+                </div>
+
+                <button type="submit" id="signup-submit-btn" class="auth-btn primary"><i class="fas fa-user-plus"></i> Create Account</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <a href="/login">Sign in here</a></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const signupForm = document.getElementById('signup-form');
+            if (signupForm) {
+                signupForm.addEventListener('submit', handleSignup);
+            }
+        });
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            
+            try {
+                AuthUtils.setButtonLoading('signup-submit-btn', true);
+                AuthUtils.showAlert('Creating your account...', 'info', 'alert-container');
+                
+                const response = await fetch('/api/v1/auth/user/register', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    AuthUtils.showAlert('Account created successfully! Redirecting to login...', 'success', 'alert-container');
+                    
+                    await AuthUtils.smoothRedirect(
+                        '/login',
+                        'Taking you to the login page...',
+                        1500
+                    );
+                } else {
+                    const errorData = await response.json();
+                    AuthUtils.showAlert(errorData.detail || 'Registration failed', 'error', 'alert-container');
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                AuthUtils.showAlert('Network error occurred. Please try again.', 'error', 'alert-container');
+            } finally {
+                AuthUtils.setButtonLoading('signup-submit-btn', false);
+            }
+        }
+    </script>
+    
+    <footer style="text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #eee; color: #666; font-size: 14px;" class="footer-links">
+        <i class="fa-solid fa-code" style="color: #764ba2;"></i> With <i class="fa-solid fa-heart" style="color: #dc143c;"></i> & <i class="fa-solid fa-mug-saucer" style="color: #b38867;"></i> by <a href="https://github.com/galaxy248"> Amir Mohammad Anvari </a> and <a href="https://github.com/AmirMahdiAboo" >Amir Mahdi Abooshahab </a>
+    </footer>
+</body>
+</html>
